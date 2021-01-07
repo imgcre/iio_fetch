@@ -14,7 +14,8 @@
 #include <map>
 #include <string>
 #include <utility>
-#include <thread>
+#include <poll.h>
+#include <queue>
 
 class dev_channel;
 
@@ -31,21 +32,23 @@ public:
 private:
     void set_trig_freq(int freq);
 
-
-
 private:
-
     std::shared_ptr<struct iio_context> ctx;
     std::shared_ptr<struct iio_device> trig;
-    std::list<std::shared_ptr<dev_channel>> chn_list;
 
-    using device_info_t = std::pair<std::shared_ptr<struct iio_device>, std::shared_ptr<struct iio_buffer>>;
-    std::map<std::string, device_info_t> dev_map;
+    struct device_info {
+        std::list<std::shared_ptr<dev_channel>> chn_list = {};
+        std::shared_ptr<struct iio_buffer> buffer = nullptr;
+        int poll_fd = 0;
+    };
 
-    std::thread fetch_thr;
+    std::map<std::shared_ptr<struct iio_device>, device_info> device_map = {};
+
 
     fetch_all_cb_t fetch_all_cb;
     bool is_cancel = false;
+
+    std::map<std::shared_ptr<dev_channel>, std::queue<float>> queues;
 
     static const char* kTrigDevName;
     static const int kTrigFreq = 1000;

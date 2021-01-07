@@ -41,55 +41,6 @@ void dev_channel::setup() {
     iio_channel_enable(chn.get());
 }
 
-void dev_channel::start(std::shared_ptr<struct iio_buffer> buf) {
-    auto self(shared_from_this());
-    thread = std::thread([this, self, buf](){
-        std::cout << "Fetching " << chn_name << "@" << buf << std::endl;
-
-        while(buf.get()) {
-            int n_recv = iio_buffer_refill(buf.get());
-            if(n_recv == -EAGAIN) {
-                std::this_thread::yield();
-                continue;
-            }
-            auto inc = iio_buffer_step(buf.get());
-            auto end = iio_buffer_end(buf.get());
-
-            system("");
-            system("echo 0 > /sys/class/leds/red/brightness");
-            thread_ex::setScheduling(thread, SCHED_RR, 99);
-            auto clock_before = clock();
-            for(auto ptr = (int16_t*)iio_buffer_first(buf.get(), chn.get()); ptr < end; ptr += inc) {
-                //on_fetch(conv(*ptr));
-            }
-
-            auto fps = 1000. / (clock() - clock_before);
-            if(fps < 10) {
-                printf("[%s] fps: %4.2f\n", chn_name, fps);
-            }
-            thread_ex::setScheduling(thread, SCHED_IDLE, 0);
-            system("echo 1 > /sys/class/leds/red/brightness");
-            //system("echo 1 > /sys/class/leds/red/brightness");
-
-
-        }
-
-    });
-
-
-}
-
-void dev_channel::on_fetch(float value) {
-    static int i = 0;
-
-    if(strcmp(chn_name, "voltage1") == 0) {
-        i++;
-        //printf("%04.2f%s", value, i % 16 ? " ": "\n");
-    }
-
-    //queue.enqueue(value);
-}
-
-float dev_channel::pop_val() {
-    return queue.dequeue();
+void dev_channel::on_fetch(int16_t value) {
+    //TODO: 转换并存入context类的队列中
 }
